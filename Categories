@@ -1,0 +1,36 @@
+import string
+
+DIGITS = '1234567890'
+LETTERS = set(string.ascii_letters)
+
+BLANKS = set(' \t\n')
+
+OPERATORS = {
+    '+':'ADD',
+    '-':'SUB',
+    '*':'MUL',  '**':'POW',
+    '/':'DIV',  '//':'FLD',  '%':'MOD',
+}
+
+COMPARATIVES = {
+    '>':'GT',    '>=':'GEQ',
+    '<':'LT',    '<=':'LEQ',
+    '=':'EQ',    '!=':'NEQ',
+}
+
+BRACKETS = {
+    '(':'LP',    ')':'RP',
+    '[':'LS',    ']':'RS',
+    '{':'LC',    '}':'RC',
+}
+
+KEYWORDS = {
+    'NONE':'NONE',
+}
+
+VARTYPES = {
+    'DVAR':'DMY', # dummy
+    'IVAR':'INT',
+    'FVAR':'FLT',
+    'SVAR':'STR',
+}
