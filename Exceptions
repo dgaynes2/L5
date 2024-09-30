@@ -1,0 +1,109 @@
+# TODO: All exceptions not inheriting from Exception need to be updated
+
+
+class ConstantsVariableError:
+    def __repr__(self):
+        return 'Error: Constants cannot be reassigned'
+
+class DecimalOverloadError(Exception):
+    def __str__(self):
+        return 'Error: Too many decimals'
+
+class DelImmutableError:
+    def __init__(self,immutable):
+        self.immutable = immutable
+
+    def __repr__(self):
+        return f'Error: "{self.immutable}" cannot be deleted'
+
+class DelSyntaxError:
+    def __repr__(self):
+        return 'Error: "del" must be followed by variable to be deleted'
+
+class DivideByZeroError:
+    def __repr__(self):
+        return 'Error: Attempted to divide by 0'
+
+class ExponentError:
+    def __repr__(self):
+        return f"Error: Both base and exponent must be numeric values"
+
+class InvalidComparisonError:
+    def __init__(self, comp_name):
+        self.comp_name = comp_name
+
+    def __repr__(self):
+        return f'Error: "{self.comp_name}" is not a valid comparison operator'
+
+class InvalidSyntaxError:
+    def __init__(self,reason):
+        self.reason = reason
+
+    def __repr__(self):
+        return f'Error: {self.reason}'
+
+class InvalidTextError:
+    def __init__(self, required, user_given):
+        self.required = required
+        self.user_given = user_given
+
+    def __repr__(self):
+        return f'Error: Invalid {self.required}: {self.user_given}'
+
+class InvalidVariableAssignmentError:
+    def __repr__(self):
+        return f"Error: Invalid variable assignment or usage"
+
+class InvalidVariableError:
+    def __init__(self,var_name):
+        self.var_name = var_name
+
+    def __repr__(self):
+        return f"Error: no variable '{self.var_name}' found"
+
+class NeqError(Exception):
+    def __str__(self):
+        return "'!' requires following '='"
+
+class SetVariableMessage:
+    def __init__(self,var_name,var_value):
+        self.var_name = var_name
+        self.var_value = var_value
+
+    def __repr__(self):
+        return f"Variable '{self.var_name}' = {self.var_value}"
+
+class UnexpectedTokenError:
+    def __init__(self,token_name):
+        self.token_name = token_name
+
+    def __repr__(self):
+        return f"Error: Unexpected token: '{self.token_name}'"
+
+class UnknownCharacterError(Exception):
+    def __init__(self,character):
+        self.character = character
+
+    def __str__(self):
+        return f"'{self.character}'"
+
+class UnmatchedBracketsError(Exception):
+    def __init__(self,bracket):
+        self.bracket = bracket
+
+    def __str__(self):
+        return f"Unmatched '{self.bracket}' character(s)"
+
+class VariableDeletedMessage:
+    def __init__(self,var_name):
+        self.var_name = var_name
+
+    def __repr__(self):
+        return f'Variable "{self.var_name}" deleted'
+
+class VariableNotFoundError:
+    def __init__(self, var_name):
+        self.var_name = var_name
+
+    def __repr__(self):
+        return f'Error: Variable "{self.var_name}" not found'
