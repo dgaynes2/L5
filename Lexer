@@ -1,0 +1,210 @@
+import Categories
+import Tokens
+import Errors
+from time import time
+
+from Tools.scripts.var_access_benchmark import list_append_pop
+from openpyxl.descriptors.serialisable import KEYWORDS
+
+
+def timer(func):
+    def wrapper(*args,**kwargs):
+        start = time()
+        result = func(*args,**kwargs)
+        end = time()
+        print(f'\n{func.__name__} executed in {(end-start)*1000:.4f}ms')
+        return result
+    return wrapper
+
+
+class   Lexer:
+    def __init__(self,text):
+        self.text = text
+        self.index = -1
+        self.current_char = None
+        self.next()
+
+        # ensure balanced brackets
+        self.bracket_count = {'(':0,'[':0,'{':0}
+
+    def next(self) -> None:
+        self.index += 1
+        self.current_char = self.text[self.index] if self.index < len(self.text) else "EOF"
+
+    def peek(self,how_far=1,look_for=None) -> bool: # check next char without moving
+        if self.index + how_far > len(self.text):
+            return False
+        return self.text[self.index + how_far] if look_for is None else self.text[self.index + how_far] == look_for
+
+    def make_tokens(self) -> list:
+        tokens = []
+
+        while self.current_char:
+            # skip whitespace
+            if self.current_char in Categories.BLANKS:
+                self.next()
+
+            # numbers
+            elif self.current_char in Categories.DIGITS + '.' + '-':
+                if self.current_char == '-':
+                    if self.peek() in Categories.DIGITS + '.':
+                        self.next()
+                        tokens.append(self.make_number(True))
+                    else:
+                        tokens.append(Tokens.OperatorToken('SUB','-'))
+                        self.next()
+                elif self.current_char in Categories.DIGITS + '.':
+                    tokens.append(self.make_number())
+                    # self.next()
+
+            # operators
+            elif self.current_char in Categories.OPERATORS:
+                tokens.append(Tokens.OperatorToken(*self.make_operator()))
+
+            # comparatives
+            elif self.current_char in '><=!':
+                tokens.append(Tokens.ComparativeToken(*self.make_comparative()))
+
+            # brackets
+            elif self.current_char in Categories.BRACKETS:
+                tokens.append(Tokens.BracketToken(*self.make_bracket()))
+                self.next()
+
+            # keywords, variables, constants
+            elif self.current_char in Categories.LETTERS:
+                tokens.append(self.make_text())
+
+            elif self.current_char == "EOF":
+                break
+
+            else:
+                raise Errors.UnknownCharacterError(self.current_char)
+
+        check, missing_brackets = self.bracket_equality_check()
+        if check:
+            return tokens
+        else:
+            raise Errors.UnmatchedBracketsError(', '.join(missing_brackets))
+
+    def make_number(self,negative=False) -> object:
+        num_str = self.current_char
+        decimal_count = 1 if self.current_char == '.' else 0
+        self.next()
+
+        while self.current_char in Categories.DIGITS + '.':
+            # prevent multiple decimals
+            if self.current_char == '.':
+                if decimal_count:
+                    raise Errors.DecimalOverloadError()
+
+                decimal_count += 1
+            num_str += self.current_char
+            self.next()
+
+        # remove leading 0s
+        num_str = num_str.lstrip('0') or '0'
+
+        # no leading decimal
+        if num_str.startswith('.'):
+            num_str = '0' + num_str
+
+        # no trailing decimal
+        if num_str.endswith('.'):
+            num_str += '0'
+
+        # negative number
+        if negative:
+            num_str = '-' + num_str
+
+        return Tokens.FloatToken(num_str) if decimal_count else Tokens.IntegerToken(num_str)
+
+    def make_operator(self) -> tuple:
+        op_str = self.current_char
+
+        if self.peek() == op_str:
+            self.next()
+            op_str += self.current_char
+
+        self.next()
+        return Categories.OPERATORS[op_str],op_str
+
+    def make_comparative(self) -> tuple:
+        comp_str = self.current_char
+
+        if comp_str in '><!':
+            if comp_str == '!' and not self.peek(look_for='='):
+                raise Errors.NeqError('Needs =')
+
+        # >= <= !=
+        if self.peek(look_for='='):
+            self.next()
+            comp_str += self.current_char
+
+        self.next()
+        return Categories.COMPARATIVES[comp_str],comp_str
+
+    def make_text(self) -> object:
+        word_str = self.current_char
+        self.next()
+
+        while self.current_char in Categories.LETTERS:
+            word_str += self.current_char
+            self.next()
+
+        if word_str in Categories.VARTYPES:
+            return Tokens.WordToken('VTP',word_str)
+
+        elif word_str in Categories.KEYWORDS:
+            return Tokens.WordToken('KEY',word_str)
+
+        else:
+            return Tokens.WordToken('VAR',word_str)
+
+    def make_bracket(self) -> tuple:
+        opening = '([{'
+        closing = ')]}'
+        match = {')':'(',']':'[','}':'{'}
+
+        if self.current_char in opening:
+            self.bracket_count[self.current_char] += 1
+        elif self.current_char in closing:
+            matching_brkt = match[self.current_char]
+            self.bracket_count[matching_brkt] -= 1
+
+        return Categories.BRACKETS[self.current_char], self.current_char
+
+    def determine_missing_bracket(self) -> list:
+        brackets = ''
+        brackets += '(' if self.bracket_count['('] > 0 else ')' if self.bracket_count['('] < 0 else ''
+        brackets += '[' if self.bracket_count['['] > 0 else ']' if self.bracket_count['['] < 0 else ''
+        brackets += '{' if self.bracket_count['{'] > 0 else '}' if self.bracket_count['{'] < 0 else ''
+        return list(brackets)
+
+    def bracket_equality_check(self) -> tuple:
+        for count in self.bracket_count.values():
+            if count != 0:
+                return False, self.determine_missing_bracket()
+        return True, []
+
+# @timer
+def token_test():
+    tokens = {
+        'INT':'0 1 10 100 000010',
+        'FLT':'. 0. .0 0.0 00. .00 00.00',
+        'OP':'+ - * ** / // % ',
+        'BRKT':'[ ] ( ) { }',
+        'CMPR':'> >= < <= = != ! ',
+        'KEY':'none None nOne NONE',
+        'TYPE':'IVAR FVAR SVAR X x ivar iVaR Ivar',
+        'TEST':'SVAR age = -3 ** ((2 + 4) - 2)',
+    }
+
+    for key in tokens:
+        lexer = Lexer(tokens[key])
+
+        tokens_list = []
+        for i in lexer.make_tokens():
+            tokens_list.append(f'{i.type}:{i.value}')
+        to_show = '| ' + key + ': ' + ', '.join(tokens_list)
+        print(to_show)
+token_test()
