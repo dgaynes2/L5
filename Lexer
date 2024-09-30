@@ -3,9 +3,6 @@ import Tokens
 import Errors
 from time import time
 
-from Tools.scripts.var_access_benchmark import list_append_pop
-from openpyxl.descriptors.serialisable import KEYWORDS
-
 
 def timer(func):
     def wrapper(*args,**kwargs):
@@ -34,7 +31,11 @@ class   Lexer:
     def peek(self,how_far=1,look_for=None) -> bool: # check next char without moving
         if self.index + how_far > len(self.text):
             return False
-        return self.text[self.index + how_far] if look_for is None else self.text[self.index + how_far] == look_for
+        return (
+            self.text[self.index + how_far]
+            if look_for is None
+            else self.text[self.index + how_far] == look_for
+        )
 
     def make_tokens(self) -> list:
         tokens = []
@@ -55,7 +56,6 @@ class   Lexer:
                         self.next()
                 elif self.current_char in Categories.DIGITS + '.':
                     tokens.append(self.make_number())
-                    # self.next()
 
             # operators
             elif self.current_char in Categories.OPERATORS:
@@ -186,7 +186,7 @@ class   Lexer:
                 return False, self.determine_missing_bracket()
         return True, []
 
-# @timer
+@timer
 def token_test():
     tokens = {
         'INT':'0 1 10 100 000010',
@@ -207,4 +207,10 @@ def token_test():
             tokens_list.append(f'{i.type}:{i.value}')
         to_show = '| ' + key + ': ' + ', '.join(tokens_list)
         print(to_show)
-token_test()
+# token_test()
+
+def read_file(file_name):
+    with open(file_name) as f:
+        lines = f.readlines()
+        print(f'Line count: {len(lines)}')
+read_file("code.txt")
